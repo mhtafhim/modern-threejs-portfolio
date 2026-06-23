@@ -1,0 +1,26 @@
+[
+  {
+    "id": "optimizing-spatial-matrices",
+    "date": "OCT 14, 2025",
+    "title": "Optimizing Spatial Matrices",
+    "summary": "A deep dive into structuring low-level algorithms for real-time physics and spatial mapping, bypassing CPU bottlenecks during 3D physical reconstructions.",
+    "tags": ["#C++", "#Algorithms"],
+    "content": "<p class='mb-4'>A deep dive into structuring low-level algorithms for real-time physics and spatial mapping, bypassing CPU bottlenecks during 3D physical reconstructions.</p><p class='mb-4'>In high-performance computing, spatial matrix optimization is crucial. When rendering 3D environments, CPU caching and memory access patterns dictate performance. By converting array-of-structures to structure-of-arrays, we achieved a significant latency reduction.</p>"
+  },
+  {
+    "id": "dqn-urban-optimization",
+    "date": "JUL 22, 2025",
+    "title": "DQN Urban Optimization",
+    "summary": "How I utilized PyTorch and SUMO simulators to train Deep Q-Networks that autonomously manage arterial gridlocks and reduce overall city carbon emissions.",
+    "tags": ["#AI", "#PyTorch"],
+    "content": "<p class='mb-4'>How I utilized PyTorch and SUMO simulators to train Deep Q-Networks that autonomously manage arterial gridlocks and reduce overall city carbon emissions.</p><p class='mb-4'>Urban environments represent complex, multi-agent systems where standard traffic control algorithms fall short. By deploying Deep Q-Learning models, intersections adapt dynamically to peak loads. This article explores the reward functions and network architecture required for this task.</p>"
+  },
+  {
+    "id": "architecting-flightops-logic",
+    "date": "MAR 05, 2024",
+    "title": "Architecting FlightOps Logic",
+    "summary": "Bridging the gap between software design and aviation realities. Exploring the wireframing and logic matrices needed to track pilot certifications safely.",
+    "tags": ["#Architecture", "#UI/UX"],
+    "content": "<p class='mb-4'>Bridging the gap between software design and aviation realities. Exploring the wireframing and logic matrices needed to track pilot certifications safely.</p><p class='mb-4'>Aviation software demands zero-tolerance for logical faults. The certification tracking arrays must intertwine seamlessly with rostering engines. We mapped out systemic logic frameworks that provided 100% compliance tracking accuracy for OCC modules.</p>"
+  }
+]
