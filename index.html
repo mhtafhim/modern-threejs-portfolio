@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahmudul Haque | Systems Architect</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff007f;
+            --dark-bg: #010106;
+            --panel-bg: rgba(4, 4, 12, 0.55);
+            --border-glow: rgba(0, 243, 255, 0.15);
+        }
+
+        html, body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--dark-bg);
+            color: #d1f4ff;
+            overflow-x: hidden; /* Prevents horizontal scrolling on mobile */
+            max-width: 100vw;
+        }
+
+        h1, h2, h3, .hud-title {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 2px;
+        }
+
+        /* Background Layering */
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 1; pointer-events: none;
+        }
+
+        .holo-grid {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+            z-index: 2; pointer-events: none;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+            background-size: 100% 4px; z-index: 9999; pointer-events: none; opacity: 0.35;
+        }
+
+        main { position: relative; z-index: 10; }
+        section { perspective: 2000px; transform-style: preserve-3d; }
+
+        /* Dynamic Cyberpunk Interactive Panels */
+        .cyber-panel {
+            background: radial-gradient(800px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(0, 243, 255, 0.08), transparent 45%), var(--panel-bg);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 15px var(--border-glow);
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+            transition: border-color 0.3s, box-shadow 0.3s;
+            transform-style: preserve-3d;
+            will-change: transform;
+            backdrop-filter: blur(5px);
+        }
+
+        .cyber-panel:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.35);
+        }
+
+        /* Glitch animations */
+        .glitch-text {
+            position: relative;
+            text-shadow: 0.05em 0 0 rgba(255, 0, 127, 0.75), -0.025em -0.05em 0 rgba(0, 243, 255, 0.75);
+            animation: glitch-anim 6s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0%, 95%, 100% { text-shadow: none; }
+            96% { text-shadow: 0.05em 0 0 rgba(255, 0, 127, 0.75), -0.05em -0.025em 0 rgba(0, 243, 255, 0.75); }
+            97% { text-shadow: -0.05em -0.025em 0 rgba(255, 0, 127, 0.75), 0.025em 0.035em 0 rgba(0, 243, 255, 0.75); }
+            98% { text-shadow: 0.025em 0.05em 0 rgba(255, 0, 127, 0.75), 0.05em 0 0 rgba(0, 243, 255, 0.75); }
+            99% { text-shadow: -0.025em 0 0 rgba(255, 0, 127, 0.75), -0.025em -0.025em 0 rgba(0, 243, 255, 0.75); }
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 3px; }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Custom Cursor - Disabled on mobile to prevent sticking */
+        @media (pointer: fine) {
+            .custom-cursor {
+                width: 24px; height: 24px; border: 1px solid var(--neon-cyan); border-radius: 50%;
+                position: fixed; transform: translate(-50%, -50%); pointer-events: none; z-index: 10000;
+                transition: width 0.2s, height 0.2s, border-color 0.2s; box-shadow: 0 0 10px var(--neon-cyan);
+            }
+            .custom-cursor-dot {
+                width: 4px; height: 4px; background-color: var(--neon-cyan); border-radius: 50%;
+                position: fixed; transform: translate(-50%, -50%); pointer-events: none; z-index: 10000;
+            }
+        }
+        @media (pointer: coarse) {
+            .custom-cursor, .custom-cursor-dot { display: none !important; }
+        }
+
+        .hud-node {
+            width: 8px; height: 8px; border: 1px solid var(--neon-cyan); background: transparent;
+            border-radius: 50%; transition: all 0.3s;
+        }
+        .active-node .hud-node { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); transform: scale(1.5); }
+    </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-black">
+
+    <div class="scanlines"></div>
+    <div class="holo-grid"></div>
+    <div class="custom-cursor" id="cursor"></div>
+    <div class="custom-cursor-dot" id="cursor-dot"></div>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Sidebar HUD (Desktop only) -->
+    <div class="hidden md:flex fixed right-6 top-1/2 -translate-y-1/2 z-50 flex-col gap-6 items-center">
+        <a href="#about" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_ABOUT</span><div class="hud-node"></div></a>
+        <a href="#experience" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_EXPERIENCE</span><div class="hud-node"></div></a>
+        <a href="#skills" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_COGNITION</span><div class="hud-node"></div></a>
+        <a href="#projects" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_REPOS</span><div class="hud-node"></div></a>
+        <a href="#blog" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_LOGS</span><div class="hud-node"></div></a>
+        <a href="#contact" class="cursor-none flex items-center justify-end gap-3 group text-xs text-cyan-400/50 hover:text-cyan-400"><span class="opacity-0 group-hover:opacity-100 transition-opacity">SYS_COMM</span><div class="hud-node"></div></a>
+    </div>
+
+    <!-- Mobile-Responsive Futuristic Top Nav -->
+    <header class="fixed top-0 left-0 w-full z-50 border-b border-cyan-500/20 bg-black/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex justify-between items-center w-full md:w-auto">
+                <div class="flex items-center gap-3">
+                    <div class="w-2.5 h-2.5 bg-cyan-400 animate-ping rounded-full"></div>
+                    <span class="hud-title text-cyan-400 font-bold tracking-widest text-sm scramble" data-value="CORE::ACTIVE">CORE::ACTIVE</span>
+                </div>
+                <!-- Audio Toggle visible on mobile right side -->
+                <button onclick="toggleAudio()" class="md:hidden px-3 py-1.5 border border-cyan-500/40 bg-cyan-950/20 text-[10px] text-cyan-400 rounded flex items-center gap-2 transition-all">
+                    <i id="audio-icon-mobile" class="fas fa-volume-mute"></i> SFX OFF
+                </button>
+            </div>
+            
+            <!-- Scrollable Nav on Mobile, Standard on Desktop -->
+            <nav class="flex items-center gap-5 text-[11px] md:text-xs font-mono overflow-x-auto whitespace-nowrap w-full md:w-auto pb-1 md:pb-0 scrollbar-hide">
+                <a href="#about" class="hover:text-cyan-400 transition-all cursor-none">[01_SYNOPSIS]</a>
+                <a href="#experience" class="hover:text-cyan-400 transition-all cursor-none">[02_EXPERIENCE]</a>
+                <a href="#skills" class="hover:text-cyan-400 transition-all cursor-none">[03_STATS]</a>
+                <a href="#projects" class="hover:text-cyan-400 transition-all cursor-none">[04_REPOS]</a>
+                <a href="#blog" class="hover:text-cyan-400 transition-all cursor-none">[05_LOGS]</a>
+                <a href="#contact" class="hover:text-cyan-400 transition-all cursor-none">[06_UPLINK]</a>
+            </nav>
+
+            <!-- Desktop Audio Toggle -->
+            <button onclick="toggleAudio()" class="hidden md:flex px-4 py-2 border border-cyan-500/40 bg-cyan-950/20 text-xs text-cyan-400 rounded items-center gap-2 cursor-none hover:border-cyan-400 transition-all">
+                <i id="audio-icon" class="fas fa-volume-mute"></i> <span id="audio-status">UI_SFX OFF</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="relative pt-12 md:pt-0"> <!-- Padding to account for stacked mobile header -->
+
+        <!-- SECTION 1: ABOUT -->
+        <section id="about" class="min-h-screen py-20 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full flex flex-col md:grid md:grid-cols-12 gap-8 items-center">
+                
+                <!-- Left Panel -->
+                <div class="md:col-span-5 flex flex-col items-center justify-center anim-panel-left w-full mt-12 md:mt-0">
+                    <div class="cyber-panel p-3 rounded-full relative w-48 h-48 md:w-64 md:h-64 overflow-hidden group">
+                        <img src="https://mhtafhim.github.io/assets/img/profile.jpg" alt="Mahmudul Haque" class="w-full h-full object-cover rounded-full filter grayscale group-hover:grayscale-0 transition-all duration-700 border border-cyan-500/50" onerror="this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=300'">
+                    </div>
+                    <div class="w-full max-w-[250px] mt-6 px-4 py-2 bg-cyan-950/20 border border-cyan-500/30 rounded text-center text-xs">
+                        <div class="flex justify-between mb-1"><span class="text-cyan-500">SYS_RESONANCE</span><span class="text-cyan-400 font-bold">98.4%</span></div>
+                        <div class="w-full bg-cyan-950 h-1.5 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[98.4%]"></div></div>
+                    </div>
+                </div>
+
+                <!-- Right Panel text block -->
+                <div class="md:col-span-7 space-y-6 w-full">
+                    <div class="space-y-2 text-center md:text-left">
+                        <div class="text-cyan-400 text-xs tracking-widest scramble anim-text-fly" data-value="// INIT SEQUENCE OK">// INIT SEQUENCE OK</div>
+                        <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-none glitch-text scramble anim-text-fly" data-value="MAHMUDUL HAQUE">MAHMUDUL HAQUE</h1>
+                        <p class="text-sm md:text-md text-cyan-300 font-semibold tracking-wider scramble anim-text-fly" data-value="SOFTWARE ENGINEER @ FSM">SOFTWARE ENGINEER @ FSM</p>
+                    </div>
+
+                    <div class="cyber-panel p-5 md:p-6 space-y-4 anim-text-fly">
+                        <div class="text-[10px] text-cyan-400/70 border-b border-cyan-500/20 pb-2 flex justify-between">
+                            <span>INDEX: 26.12.2002</span><span>LOC: DHAKA, BD</span>
+                        </div>
+                        <p class="text-xs md:text-sm leading-relaxed text-cyan-100/90 font-mono">
+                            Specializing in low-latency C++ implementations, predictive mathematical modeling, and artificial intelligence networks. Constructing core spatial algorithms and structural calibrations.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 justify-center md:justify-start anim-text-fly">
+                        <a href="#experience" class="px-6 py-3 bg-cyan-500 text-black font-bold uppercase text-xs tracking-wider hover:bg-white hover:text-cyan-950 transition-all cursor-none border border-cyan-400">[DIAGNOSTICS]</a>
+                        <a href="#contact" class="px-6 py-3 bg-transparent text-cyan-400 font-bold uppercase text-xs tracking-wider hover:bg-cyan-950/40 transition-all cursor-none border border-cyan-400/50">[ESTABLISH_UPLINK]</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: EXPERIENCE -->
+        <section id="experience" class="min-h-screen py-24 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full space-y-12">
+                <div class="text-center anim-text-fly">
+                    <h2 class="text-2xl md:text-3xl font-black text-white tracking-widest scramble" data-value="[02 // OPERATIONS_LOGS]">[02 // OPERATIONS_LOGS]</h2>
+                    <div class="h-0.5 w-24 md:w-32 bg-cyan-400 mx-auto mt-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Cards will animate individually exactly when they hit the viewport -->
+                    <div class="cyber-panel p-6 md:p-8 relative flex flex-col justify-between anim-panel-left">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-start">
+                                <span class="text-cyan-400 text-[10px] md:text-xs font-bold tracking-widest font-mono">[11/2025 - CURRENT]</span>
+                                <div class="text-[8px] md:text-[9px] text-green-400 bg-green-950/40 px-2 py-0.5 border border-green-500/30">NODE_ONLINE</div>
+                            </div>
+                            <h3 class="text-lg md:text-xl font-bold text-white scramble" data-value="SOFTWARE ENGINEER">SOFTWARE ENGINEER</h3>
+                            <p class="text-cyan-300 text-xs font-mono">FRONTIER SEMICONDUCTOR (FSM)</p>
+                            <ul class="space-y-3 text-xs text-cyan-100/85 font-mono">
+                                <li class="flex items-start gap-2"><span class="text-cyan-400">▶</span><span>Engineered spatial C++ / MFC coordinate algorithms to digitally reconstruct entire physical wafer radii.</span></li>
+                                <li class="flex items-start gap-2"><span class="text-cyan-400">▶</span><span>Designed a predictive 3D Z-axis compensation model to optimize dynamic autofocusing procedures on micro-stages.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyan-500/20 text-[10px] text-cyan-500 flex flex-wrap gap-2 md:gap-3">
+                            <span>#cpp</span> <span>#mfc</span> <span>#spatial-math</span>
+                        </div>
+                    </div>
+
+                    <div class="cyber-panel p-6 md:p-8 relative flex flex-col justify-between anim-panel-right">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-start">
+                                <span class="text-cyan-400 text-[10px] md:text-xs font-bold tracking-widest font-mono">[08/2025 - 10/2025]</span>
+                                <div class="text-[8px] md:text-[9px] text-cyan-500 bg-cyan-950/40 px-2 py-0.5 border border-cyan-500/30">ARCHIVE</div>
+                            </div>
+                            <h3 class="text-lg md:text-xl font-bold text-white scramble" data-value="BUSINESS ANALYST">BUSINESS ANALYST</h3>
+                            <p class="text-cyan-300 text-xs font-mono">US-BANGLA AIRLINES</p>
+                            <ul class="space-y-3 text-xs text-cyan-100/85 font-mono">
+                                <li class="flex items-start gap-2"><span class="text-cyan-400">▶</span><span>Mapped systemic logic frameworks to coordinate aircraft OCC modules and cabin crews.</span></li>
+                                <li class="flex items-start gap-2"><span class="text-cyan-400">▶</span><span>Formulated operational workflows and wireframed automated licensing tracking arrays.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-cyan-500/20 text-[10px] text-cyan-500 flex flex-wrap gap-2 md:gap-3">
+                            <span>#flightops</span> <span>#architecture</span> <span>#wireframes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: SKILLS -->
+        <section id="skills" class="min-h-screen py-24 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full space-y-12">
+                <div class="text-center anim-text-fly">
+                    <h2 class="text-2xl md:text-3xl font-black text-white tracking-widest scramble" data-value="[03 // COGNITIVE_SPECS]">[03 // COGNITIVE_SPECS]</h2>
+                    <div class="h-0.5 w-24 md:w-32 bg-cyan-400 mx-auto mt-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                    <!-- Left Skills panels -->
+                    <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="cyber-panel p-6 space-y-4 anim-panel-left">
+                            <h3 class="text-white font-bold text-sm border-b border-cyan-500/30 pb-2">// COMPILER CORE</h3>
+                            <div class="space-y-3 text-xs font-mono">
+                                <div><div class="flex justify-between mb-1"><span>C / C++</span><span>95%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[95%] anim-bar"></div></div></div>
+                                <div><div class="flex justify-between mb-1"><span>Python (AI)</span><span>90%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[90%] anim-bar"></div></div></div>
+                                <div><div class="flex justify-between mb-1"><span>C# / .NET</span><span>80%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[80%] anim-bar"></div></div></div>
+                            </div>
+                        </div>
+
+                        <div class="cyber-panel p-6 space-y-4 anim-panel-left" style="animation-delay: 0.1s;">
+                            <h3 class="text-white font-bold text-sm border-b border-cyan-500/30 pb-2">// INTELLIGENCE STACK</h3>
+                            <div class="space-y-3 text-xs font-mono">
+                                <div><div class="flex justify-between mb-1"><span>PyTorch / DQN</span><span>88%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[88%] anim-bar"></div></div></div>
+                                <div><div class="flex justify-between mb-1"><span>Algorithms</span><span>95%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[95%] anim-bar"></div></div></div>
+                                <div><div class="flex justify-between mb-1"><span>Data DBs</span><span>90%</span></div><div class="h-1 bg-cyan-950 rounded-full overflow-hidden"><div class="bg-cyan-400 h-full w-[90%] anim-bar"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Stats panel -->
+                    <div class="md:col-span-4 space-y-6 anim-panel-right">
+                        <div class="cyber-panel p-6 border-magenta-500/30">
+                            <h3 class="text-white font-bold text-sm border-b border-magenta-500/30 pb-2">// OVERCLOCK_INDEX</h3>
+                            <div class="mt-4 space-y-3 text-xs font-mono">
+                                <div class="bg-cyan-950/20 p-2.5 border border-cyan-500/20 flex justify-between items-center"><span>CODEFORCES:</span><strong class="text-cyan-400">1263 [Pupil]</strong></div>
+                                <div class="bg-cyan-950/20 p-2.5 border border-cyan-500/20 flex justify-between items-center"><span>CODECHEF:</span><strong class="text-cyan-400">1542 [3 Star]</strong></div>
+                                <div class="bg-magenta-950/20 p-2 border border-magenta-500/20 text-center">700+ COMPILATIONS FINISHED</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: PROJECTS -->
+        <section id="projects" class="min-h-screen py-24 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full space-y-12">
+                <div class="text-center anim-text-fly">
+                    <h2 class="text-2xl md:text-3xl font-black text-white tracking-widest scramble" data-value="[04 // REPOSITORIES]">[04 // REPOSITORIES]</h2>
+                    <div class="h-0.5 w-24 md:w-32 bg-cyan-400 mx-auto mt-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <div class="cyber-panel p-6 flex flex-col justify-between anim-panel-up">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center text-[10px] text-cyan-500"><span>[MODEL_STABLE]</span><i class="fas fa-brain text-lg text-cyan-400"></i></div>
+                            <h3 class="text-lg font-bold text-white scramble" data-value="INTELLIGENT TRANSIT">INTELLIGENT TRANSIT</h3>
+                            <p class="text-xs text-cyan-200/80 font-mono leading-relaxed">Integrated custom PyTorch Deep Q-Networks (DQN) inside SUMO grids to optimize urban transit configurations dynamically.</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-cyan-500/10 text-[9px] text-cyan-500/70">#pytorch #sumo #RL</div>
+                    </div>
+
+                    <div class="cyber-panel p-6 flex flex-col justify-between anim-panel-up">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center text-[10px] text-cyan-500"><span>[API_RESONANT]</span><i class="fas fa-subway text-lg text-cyan-400"></i></div>
+                            <h3 class="text-lg font-bold text-white scramble" data-value="RAILWAY ESERVICE">RAILWAY ESERVICE</h3>
+                            <p class="text-xs text-cyan-200/80 font-mono leading-relaxed">Developed a high-throughput transaction backend implementing robust RESTful endpoints.</p>
+                        </div>
+                        <a href="https://github.com/mhtafhim/railways3.0" target="_blank" class="mt-4 pt-4 text-[9px] text-cyan-400 flex items-center justify-between cursor-none border-t border-cyan-500/10"><span>ACCESS_SOURCE_CODE</span> <i class="fas fa-external-link-alt"></i></a>
+                    </div>
+
+                    <div class="cyber-panel p-6 flex flex-col justify-between anim-panel-up">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center text-[10px] text-cyan-500"><span>[RENDER_STABLE]</span><i class="fas fa-gamepad text-lg text-cyan-400"></i></div>
+                            <h3 class="text-lg font-bold text-white scramble" data-value="SONIC ENGINE">SONIC ENGINE</h3>
+                            <p class="text-xs text-cyan-200/80 font-mono leading-relaxed">Engineered real-time collision dynamics and rigid physics maps utilizing C++ and native OpenGL APIs.</p>
+                        </div>
+                        <a href="https://github.com/mhtafhim/SonicTheHedgeHog" target="_blank" class="mt-4 pt-4 text-[9px] text-cyan-400 flex items-center justify-between cursor-none border-t border-cyan-500/10"><span>ACCESS_SOURCE_CODE</span> <i class="fas fa-external-link-alt"></i></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: BLOG -->
+        <section id="blog" class="min-h-screen py-24 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full space-y-12">
+                <div class="text-center anim-text-fly">
+                    <h2 class="text-2xl md:text-3xl font-black text-white tracking-widest scramble" data-value="[05 // PERSONAL_LOGS]">[05 // PERSONAL_LOGS]</h2>
+                    <div class="h-0.5 w-24 md:w-32 bg-magenta-500 mx-auto mt-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <div class="cyber-panel p-6 flex flex-col justify-between border-magenta-500/30 anim-panel-up group">
+                        <div class="space-y-3 text-xs font-mono">
+                            <div class="text-magenta-400 tracking-widest mb-2 border-b border-magenta-500/20 pb-2">OCT 14, 2025</div>
+                            <h3 class="text-lg font-bold text-white scramble group-hover:text-cyan-400 transition-colors" data-value="Optimizing Spatial Matrices">Optimizing Spatial Matrices</h3>
+                            <p class="text-cyan-200/80 leading-relaxed">
+                                A deep dive into structuring low-level algorithms for real-time physics and spatial mapping, bypassing CPU bottlenecks during 3D physical reconstructions.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-4 flex items-center justify-between border-t border-magenta-500/10">
+                            <div class="flex gap-2 text-[9px] text-cyan-500"><span>#C++</span><span>#Algorithms</span></div>
+                            <a href="#" class="text-cyan-400 text-xs hover:text-white cursor-none transition-colors"><i class="fas fa-arrow-right"></i> READ</a>
+                        </div>
+                    </div>
+
+                    <div class="cyber-panel p-6 flex flex-col justify-between border-magenta-500/30 anim-panel-up group">
+                        <div class="space-y-3 text-xs font-mono">
+                            <div class="text-magenta-400 tracking-widest mb-2 border-b border-magenta-500/20 pb-2">JUL 22, 2025</div>
+                            <h3 class="text-lg font-bold text-white scramble group-hover:text-cyan-400 transition-colors" data-value="DQN Urban Optimization">DQN Urban Optimization</h3>
+                            <p class="text-cyan-200/80 leading-relaxed">
+                                How I utilized PyTorch and SUMO simulators to train Deep Q-Networks that autonomously manage arterial gridlocks and reduce overall city carbon emissions.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-4 flex items-center justify-between border-t border-magenta-500/10">
+                            <div class="flex gap-2 text-[9px] text-cyan-500"><span>#AI</span><span>#PyTorch</span></div>
+                            <a href="#" class="text-cyan-400 text-xs hover:text-white cursor-none transition-colors"><i class="fas fa-arrow-right"></i> READ</a>
+                        </div>
+                    </div>
+
+                    <div class="cyber-panel p-6 flex flex-col justify-between border-magenta-500/30 anim-panel-up group">
+                        <div class="space-y-3 text-xs font-mono">
+                            <div class="text-magenta-400 tracking-widest mb-2 border-b border-magenta-500/20 pb-2">MAR 05, 2024</div>
+                            <h3 class="text-lg font-bold text-white scramble group-hover:text-cyan-400 transition-colors" data-value="Architecting FlightOps Logic">Architecting FlightOps Logic</h3>
+                            <p class="text-cyan-200/80 leading-relaxed">
+                                Bridging the gap between software design and aviation realities. Exploring the wireframing and logic matrices needed to track pilot certifications safely.
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-4 flex items-center justify-between border-t border-magenta-500/10">
+                            <div class="flex gap-2 text-[9px] text-cyan-500"><span>#Architecture</span><span>#UI/UX</span></div>
+                            <a href="#" class="text-cyan-400 text-xs hover:text-white cursor-none transition-colors"><i class="fas fa-arrow-right"></i> READ</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: CONTACT & TERMINAL -->
+        <section id="contact" class="min-h-screen py-24 px-4 md:px-6 flex items-center justify-center bg-transparent">
+            <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
+                <!-- Form -->
+                <div class="md:col-span-7 cyber-panel p-6 md:p-8 anim-panel-left">
+                    <h2 class="text-2xl font-black text-white tracking-widest mb-6 scramble anim-text-fly" data-value="[06 // SEND_SIGNAL]">[06 // SEND_SIGNAL]</h2>
+                    <form action="mailto:mahmudulhoquetafhim@gmail.com" method="post" enctype="text/plain" class="space-y-4 text-xs font-mono">
+                        <div>
+                            <label class="block text-cyan-400 mb-1">TRANSMITTER_ID (NAME)</label>
+                            <input type="text" required class="w-full bg-cyan-950/20 border border-cyan-500/30 px-4 py-3 text-white focus:outline-none focus:border-cyan-400 transition-all cursor-none">
+                        </div>
+                        <div>
+                            <label class="block text-cyan-400 mb-1">SIGNAL_PORT (EMAIL)</label>
+                            <input type="email" required class="w-full bg-cyan-950/20 border border-cyan-500/30 px-4 py-3 text-white focus:outline-none focus:border-cyan-400 transition-all cursor-none">
+                        </div>
+                        <div>
+                            <label class="block text-cyan-400 mb-1">MESSAGE_STRING</label>
+                            <textarea rows="4" required class="w-full bg-cyan-950/20 border border-cyan-500/30 px-4 py-3 text-white focus:outline-none focus:border-cyan-400 transition-all cursor-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-cyan-500 text-black font-bold uppercase tracking-wider hover:bg-white transition-all cursor-none">
+                            [BROADCAST_TRANSMISSION]
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Terminal -->
+                <div class="md:col-span-5 cyber-panel p-5 md:p-6 bg-black/80 flex flex-col justify-between min-h-[350px] anim-panel-right">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-cyan-500/20 pb-2 mb-4 text-xs">
+                            <span class="text-cyan-400 font-bold"><i class="fas fa-terminal mr-2"></i>SYS_RESONATOR_SHELL</span>
+                            <div class="flex gap-1.5"><div class="w-2 h-2 rounded-full bg-red-500"></div><div class="w-2 h-2 rounded-full bg-yellow-500"></div><div class="w-2 h-2 rounded-full bg-green-500"></div></div>
+                        </div>
+                        <div id="term-history" class="text-[10px] md:text-xs space-y-2 font-mono max-h-[220px] overflow-y-auto text-cyan-300">
+                            <div>UPLINK SECURED. TYPE <span class="text-magenta-400">"help"</span> FOR LOG DIRECTIVES.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 items-center border-t border-cyan-500/20 pt-2 mt-4 text-[10px] md:text-xs font-mono">
+                        <span class="text-magenta-400 font-bold">visitor@mhaque:~$</span>
+                        <input type="text" id="term-input" class="bg-transparent text-white focus:outline-none flex-grow cursor-none" placeholder="query engine...">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /* === UI INTERACTION SFX ENGINE (Ambient removed) === */
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let audioEnabled = false;
+
+        function toggleAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            audioEnabled = !audioEnabled;
+            
+            // Desktop and Mobile Icons update
+            const icons = [document.getElementById('audio-icon'), document.getElementById('audio-icon-mobile')];
+            const status = document.getElementById('audio-status');
+            
+            if (audioEnabled) {
+                icons.forEach(i => { if(i) i.className = 'fas fa-volume-up text-cyan-400'; });
+                if(status) status.textContent = 'UI_SFX ON';
+                playBeep(700, 'sine', 0.2); // Interface confirmation beep
+            } else {
+                icons.forEach(i => { if(i) i.className = 'fas fa-volume-mute'; });
+                if(status) status.textContent = 'UI_SFX OFF';
+            }
+        }
+
+        // Only plays short feedback blips on interaction, no persistent drones
+        function playBeep(freq, type, duration) {
+            if (!audioEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = type || 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime); // Keep very quiet
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        /* === Hacker Matrix Text Decode/Scramble Engine === */
+        class TextScrambler {
+            constructor(el) {
+                this.el = el;
+                this.chars = '!<>-_\\/[]{}—=+*^?#________';
+                this.update = this.update.bind(this);
+            }
+            setText(newText) {
+                const oldText = this.el.innerText;
+                const length = Math.max(oldText.length, newText.length);
+                const promise = new Promise((resolve) => this.resolve = resolve);
+                this.queue = [];
+                for (let i = 0; i < length; i++) {
+                    const from = oldText[i] || '';
+                    const to = newText[i] || '';
+                    const start = Math.floor(Math.random() * 40);
+                    const end = start + Math.floor(Math.random() * 40);
+                    this.queue.push({ from, to, start, end });
+                }
+                cancelAnimationFrame(this.frameId);
+                this.frame = 0;
+                this.update();
+                return promise;
+            }
+            update() {
+                let output = '';
+                let complete = 0;
+                for (let i = 0, n = this.queue.length; i < n; i++) {
+                    let { from, to, start, end, char } = this.queue[i];
+                    if (this.frame >= end) {
+                        complete++;
+                        output += to;
+                    } else if (this.frame >= start) {
+                        if (!char || Math.random() < 0.28) {
+                            char = this.chars[Math.floor(Math.random() * this.chars.length)];
+                            this.queue[i].char = char;
+                        }
+                        output += `<span class="text-cyan-400 font-bold">${char}</span>`;
+                    } else {
+                        output += from;
+                    }
+                }
+                this.el.innerHTML = output;
+                if (complete === this.queue.length) {
+                    this.resolve();
+                } else {
+                    this.frameId = requestAnimationFrame(this.update);
+                    this.frame++;
+                }
+            }
+        }
+
+        function initScramble(el) {
+            if (el.dataset.scrambled) return;
+            el.dataset.scrambled = 'true';
+            const scrambler = new TextScrambler(el);
+            scrambler.setText(el.dataset.value || el.innerText);
+        }
+
+        // Initialize scrambling on hover for desktop users
+        document.querySelectorAll('.scramble').forEach(el => {
+            el.addEventListener('mouseenter', () => initScramble(el));
+        });
+
+        /* === Cursor Physics & Dynamic Hover Spotlights === */
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursor-dot');
+        let mX = 0, mY = 0, bX = 0, bY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mX = e.clientX; mY = e.clientY;
+            if(cursorDot) { cursorDot.style.left = mX + 'px'; cursorDot.style.top = mY + 'px'; }
+        });
+
+        function renderCursor() {
+            bX += (mX - bX) * 0.15; bY += (mY - bY) * 0.15;
+            if(cursor) { cursor.style.left = bX + 'px'; cursor.style.top = bY + 'px'; }
+            requestAnimationFrame(renderCursor);
+        }
+        // Only run custom cursor logic if device supports hover
+        if(window.matchMedia("(pointer: fine)").matches) {
+            renderCursor();
+        }
+
+        document.querySelectorAll('.cyber-panel').forEach(panel => {
+            panel.addEventListener('mousemove', (e) => {
+                const rect = panel.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                panel.style.setProperty('--mouse-x', `${x}px`);
+                panel.style.setProperty('--mouse-y', `${y}px`);
+
+                // 3D Skew effect (Disabled on very small screens to prevent layout bugs)
+                if(window.innerWidth > 768) {
+                    const centerX = rect.width / 2; const centerY = rect.height / 2;
+                    const tiltX = (y - centerY) / centerY * 6;
+                    const tiltY = (centerX - x) / centerX * 6;
+                    panel.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(1.02)`;
+                }
+            });
+            panel.addEventListener('mouseleave', () => panel.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)');
+            
+            // Beep and cursor style changes on hover
+            panel.addEventListener('mouseenter', () => {
+                playBeep(880, 'sine', 0.04);
+                if(cursor) {
+                    cursor.style.width = '36px'; cursor.style.height = '36px';
+                    cursor.style.borderColor = '#ff007f'; cursor.style.boxShadow = '0 0 15px #ff007f';
+                }
+            });
+            panel.addEventListener('mouseleave', () => {
+                if(cursor) {
+                    cursor.style.width = '24px'; cursor.style.height = '24px';
+                    cursor.style.borderColor = '#00f3ff'; cursor.style.boxShadow = '0 0 10px #00f3ff';
+                }
+            });
+        });
+
+        /* === GSAP ScrollTrigger Animations (Refactored for True Mobile Responsiveness) === */
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Sidebar node sync
+        const sections = document.querySelectorAll('section');
+        sections.forEach((sec, idx) => {
+            ScrollTrigger.create({
+                trigger: sec, start: "top center", end: "bottom center",
+                onEnter: () => updateNavNodes(idx), onEnterBack: () => updateNavNodes(idx)
+            });
+        });
+
+        function updateNavNodes(activeIndex) {
+            document.querySelectorAll('.fixed .group').forEach((node, i) => {
+                i === activeIndex ? node.classList.add('active-node') : node.classList.remove('active-node');
+            });
+        }
+
+        // Individually bind GSAP triggers to EACH element so they never animate off-screen on mobile
+        
+        gsap.utils.toArray('.scramble').forEach(t => {
+            ScrollTrigger.create({ trigger: t, start: "top 85%", onEnter: () => initScramble(t) });
+        });
+
+        gsap.utils.toArray('.anim-panel-left').forEach(el => {
+            gsap.fromTo(el, 
+                { x: -100, rotationY: window.innerWidth > 768 ? 45 : 0, opacity: 0, scale: 0.9 }, 
+                { x: 0, rotationY: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } }
+            );
+        });
+
+        gsap.utils.toArray('.anim-panel-right').forEach(el => {
+            gsap.fromTo(el, 
+                { x: 100, rotationY: window.innerWidth > 768 ? -45 : 0, opacity: 0, scale: 0.9 }, 
+                { x: 0, rotationY: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } }
+            );
+        });
+
+        gsap.utils.toArray('.anim-panel-up').forEach(el => {
+            gsap.fromTo(el, 
+                { y: 80, rotationX: window.innerWidth > 768 ? -45 : 0, opacity: 0, scale: 0.9 }, 
+                { y: 0, rotationX: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } }
+            );
+        });
+
+        gsap.utils.toArray('.anim-text-fly').forEach(el => {
+            gsap.fromTo(el, 
+                { z: -300, y: 30, rotationX: window.innerWidth > 768 ? -30 : 0, opacity: 0 }, 
+                { z: 0, y: 0, rotationX: 0, opacity: 1, duration: 1.2, ease: "back.out(1.2)", scrollTrigger: { trigger: el, start: "top 90%" } }
+            );
+        });
+
+        gsap.utils.toArray('.anim-bar').forEach(b => {
+            gsap.fromTo(b, { width: "0%" }, {
+                width: b.parentElement.previousElementSibling.lastElementChild.innerText,
+                duration: 1.5, ease: "power3.out", scrollTrigger: { trigger: b, start: "top 90%" }
+            });
+        });
+
+        /* === Three.js Constellation Mesh & Persistent Background === */
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+
+        // Cap pixel ratio to prevent lag on high-res mobile screens
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Slightly fewer particles for mobile optimization
+        const pCount = window.innerWidth > 768 ? 250 : 120; 
+        const geom = new THREE.BufferGeometry();
+        const positions = new Float32Array(pCount * 3);
+        const speeds = [];
+
+        for (let i = 0; i < pCount * 3; i += 3) {
+            positions[i] = (Math.random() - 0.5) * 60;
+            positions[i + 1] = (Math.random() - 0.5) * 60;
+            positions[i + 2] = (Math.random() - 0.5) * 60;
+            speeds.push({
+                x: (Math.random() - 0.5) * 0.015, y: (Math.random() - 0.5) * 0.015, z: (Math.random() - 0.5) * 0.015
+            });
+        }
+
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const pMat = new THREE.PointsMaterial({ color: 0x00f3ff, size: window.innerWidth > 768 ? 0.35 : 0.6, transparent: true, opacity: 0.8 });
+        const cloud = new THREE.Points(geom, pMat);
+        scene.add(cloud);
+
+        const lineGeom = new THREE.BufferGeometry();
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.22 });
+        const lineSegments = new THREE.LineSegments(lineGeom, lineMat);
+        scene.add(lineSegments);
+
+        const blueLight = new THREE.PointLight(0x00f3ff, 2.5, 120); blueLight.position.set(20, 20, 20); scene.add(blueLight);
+        const pinkLight = new THREE.PointLight(0xff007f, 2.5, 120); pinkLight.position.set(-20, -20, -20); scene.add(pinkLight);
+
+        // Extended camera path
+        const camPath = [
+            { x: 0, y: 0, z: 28 },      // About
+            { x: 18, y: -5, z: 22 },    // Experience
+            { x: -16, y: 10, z: 26 },   // Skills
+            { x: 12, y: -18, z: 18 },   // Projects
+            { x: -10, y: 15, z: 20 },   // Blog
+            { x: 0, y: 5, z: 32 }       // Contact
+        ];
+
+        camera.position.set(camPath[0].x, camPath[0].y, camPath[0].z);
+
+        // Map flightpath transitions accurately to each section wrapper
+        sections.forEach((sec, idx) => {
+            if (idx === 0) return;
+            gsap.to(camera.position, {
+                x: camPath[idx].x, y: camPath[idx].y, z: camPath[idx].z,
+                scrollTrigger: { trigger: sec, start: "top bottom", end: "top top", scrub: 1.5 }
+            });
+        });
+
+        // 3D Parallax Mouse Offset
+        let camOffsetX = 0, camOffsetY = 0;
+        document.addEventListener('mousemove', (e) => {
+            if(window.innerWidth > 768) {
+                camOffsetX = (e.clientX - window.innerWidth / 2) * 0.003;
+                camOffsetY = (e.clientY - window.innerHeight / 2) * 0.003;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Main WebGL Frame loop
+        function renderLoop() {
+            requestAnimationFrame(renderLoop);
+            
+            cloud.rotation.y += 0.0006; cloud.rotation.x += 0.0003;
+
+            // Apply interactive camera offset
+            camera.position.x += (camOffsetX - camera.position.x * 0.05) * 0.02;
+            camera.position.y += (-camOffsetY - camera.position.y * 0.05) * 0.02;
+            camera.lookAt(0, 0, 0);
+
+            const posAttr = cloud.geometry.attributes.position;
+            const linePositions = [];
+
+            for (let i = 0; i < pCount; i++) {
+                let x = posAttr.getX(i), y = posAttr.getY(i), z = posAttr.getZ(i);
+                x += speeds[i].x; y += speeds[i].y; z += speeds[i].z;
+
+                if (x > 30 || x < -30) speeds[i].x *= -1;
+                if (y > 30 || y < -30) speeds[i].y *= -1;
+                if (z > 30 || z < -30) speeds[i].z *= -1;
+
+                posAttr.setXYZ(i, x, y, z);
+
+                // Re-draw dynamic proximity lines
+                for (let j = i + 1; j < pCount; j++) {
+                    const dx = x - posAttr.getX(j), dy = y - posAttr.getY(j), dz = z - posAttr.getZ(j);
+                    if (Math.sqrt(dx*dx + dy*dy + dz*dz) < 9.5) {
+                        linePositions.push(x, y, z);
+                        linePositions.push(posAttr.getX(j), posAttr.getY(j), posAttr.getZ(j));
+                    }
+                }
+            }
+            posAttr.needsUpdate = true;
+            lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            lineGeom.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        renderLoop();
+
+        /* === Terminal Shell logic === */
+        const tInput = document.getElementById('term-input');
+        const tHistory = document.getElementById('term-history');
+
+        tInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = tInput.value.trim().toLowerCase();
+                tInput.value = ''; executeTerminal(cmd);
+            }
+        });
+
+        function executeTerminal(cmd) {
+            playBeep(420, 'square', 0.05);
+            let response = '';
+
+            switch(cmd) {
+                case 'help': response = `Configs:<br>&gt; <span class="text-cyan-400">profile</span><br>&gt; <span class="text-cyan-400">skills</span><br>&gt; <span class="text-cyan-400">blog</span><br>&gt; <span class="text-cyan-400">contact</span>`; break;
+                case 'profile': response = `Mahmudul Haque // BSc CSE<br>Embedded semiconductors and ML.`; break;
+                case 'skills': response = `High-Perf: C++, Python, PyTorch<br>DB: MSSQL, MySQL, Firebase`; break;
+                case 'blog': response = `Latest log fetched: "Optimizing Spatial Matrices in C++"`; break;
+                case 'contact': response = `Transmit to: mahmudulhoquetafhim@gmail.com`; break;
+                default: response = `Error: sequence "${cmd}" not recognized.`;
+            }
+
+            tHistory.innerHTML += `<div class="mt-2 text-magenta-500 font-bold">&gt; visitor@mhaque:~$ ${cmd}</div><div class="pl-2 border-l border-cyan-500/30 text-white">${response}</div>`;
+            tHistory.scrollTop = tHistory.scrollHeight;
+        }
+    </script>
+</body>
+</html>
